@@ -32,12 +32,12 @@ pub fn cstr(path: &Path) -> io::Result<CString> {
         .map_err(|_| io::Error::new(io::ErrorKind::InvalidInput, "path contained a null"))
 }
 
-pub fn create_named(path: &Path, open_options: &mut OpenOptions) -> io::Result<File> {
+pub fn create_named(world_accessible: bool, path: &Path, open_options: &mut OpenOptions) -> io::Result<File> {
     open_options
         .read(true)
         .write(true)
         .create_new(true)
-        .mode(0o600)
+        .mode(if world_accessible { 0o666 } else { 0o600 })
         .open(path)
 }
 
@@ -51,7 +51,7 @@ fn create_unlinked(path: &Path) -> io::Result<File> {
         path = &tmp;
     }
 
-    let f = create_named(path, &mut OpenOptions::new())?;
+    let f = create_named(false, path, &mut OpenOptions::new())?;
     // don't care whether the path has already been unlinked,
     // but perhaps there are some IO error conditions we should send up?
     let _ = fs::remove_file(path);
@@ -83,10 +83,11 @@ pub fn create(dir: &Path) -> io::Result<File> {
 fn create_unix(dir: &Path) -> io::Result<File> {
     util::create_helper(
         dir,
+        false,
         OsStr::new(".tmp"),
         OsStr::new(""),
         crate::NUM_RAND_CHARS,
-        |path| create_unlinked(&path),
+        |_world_accessible, path| create_unlinked(&path),
     )
 }
 

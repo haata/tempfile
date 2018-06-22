@@ -20,7 +20,8 @@ fn to_utf16(s: &Path) -> Vec<u16> {
     s.as_os_str().encode_wide().chain(iter::once(0)).collect()
 }
 
-pub fn create_named(path: &Path, open_options: &mut OpenOptions) -> io::Result<File> {
+pub fn create_named(world_accessible: bool, path: &Path, open_options: &mut OpenOptions) -> io::Result<File> {
+    // TODO MAKE WORK ON WINDOWS
     open_options
         .create_new(true)
         .read(true)
@@ -30,12 +31,14 @@ pub fn create_named(path: &Path, open_options: &mut OpenOptions) -> io::Result<F
 }
 
 pub fn create(dir: &Path) -> io::Result<File> {
+    // TODO MAKE WORK ON WINDOWS
     util::create_helper(
         dir,
+        false,
         OsStr::new(".tmp"),
         OsStr::new(""),
         crate::NUM_RAND_CHARS,
-        |path| {
+        |world_accessible, path| {
             OpenOptions::new()
                 .create_new(true)
                 .read(true)

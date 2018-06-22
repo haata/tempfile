@@ -152,6 +152,7 @@ pub use crate::spooled::{spooled_tempfile, SpooledTempFile};
 /// Create a new temporary file or directory with custom parameters.
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub struct Builder<'a, 'b> {
+    world_accessible: bool,
     random_len: usize,
     prefix: &'a OsStr,
     suffix: &'b OsStr,
@@ -162,6 +163,7 @@ impl<'a, 'b> Default for Builder<'a, 'b> {
     fn default() -> Self {
         Builder {
             random_len: crate::NUM_RAND_CHARS,
+            world_accessible: false,
             prefix: OsStr::new(".tmp"),
             suffix: OsStr::new(""),
             append: false,
@@ -323,6 +325,33 @@ impl<'a, 'b> Builder<'a, 'b> {
         self
     }
 
+    /// Set whether anyone should be able to read and write to the temporary
+    /// file.
+    ///
+    /// Default: `false`.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// # use std::io;
+    /// # fn main() {
+    /// #     if let Err(_) = run() {
+    /// #         ::std::process::exit(1);
+    /// #     }
+    /// # }
+    /// # fn run() -> Result<(), io::Error> {
+    /// # use tempfile::Builder;
+    /// let named_tempfile = Builder::new()
+    ///     .world_accessible(true)
+    ///     .tempfile()?;
+    /// # Ok(())
+    /// # }
+    /// ```
+    pub fn world_accessible(&mut self, world_accessible: bool) -> &mut Self {
+        self.world_accessible = world_accessible;
+        self
+    }
+
     /// Set the file to be opened in append mode.
     ///
     /// Default: `false`.
@@ -420,10 +449,11 @@ impl<'a, 'b> Builder<'a, 'b> {
     pub fn tempfile_in<P: AsRef<Path>>(&self, dir: P) -> io::Result<NamedTempFile> {
         util::create_helper(
             dir.as_ref(),
+            self.world_accessible,
             self.prefix,
             self.suffix,
             self.random_len,
-            |path| file::create_named(path, OpenOptions::new().append(self.append)),
+            |world_accessible, path| file::create_named(world_accessible, path, OpenOptions::new().append(self.append)),
         )
     }
 
@@ -495,6 +525,13 @@ impl<'a, 'b> Builder<'a, 'b> {
             dir = &storage;
         }
 
-        util::create_helper(dir, self.prefix, self.suffix, self.random_len, dir::create)
+        util::create_helper(
+            dir,
+            self.world_accessible,
+            self.prefix,
+            self.suffix,
+            self.random_len,
+            dir::create,
+        )
     }
 }
