@@ -25,13 +25,14 @@ fn tmpname(prefix: &OsStr, suffix: &OsStr, rand_len: usize) -> OsString {
 
 pub fn create_helper<F, R>(
     base: &Path,
+    world_accessible: bool,
     prefix: &OsStr,
     suffix: &OsStr,
     random_len: usize,
     f: F,
 ) -> io::Result<R>
 where
-    F: Fn(PathBuf) -> io::Result<R>,
+    F: Fn(bool, PathBuf) -> io::Result<R>,
 {
     let num_retries = if random_len != 0 {
         crate::NUM_RETRIES
@@ -41,7 +42,7 @@ where
 
     for _ in 0..num_retries {
         let path = base.join(tmpname(prefix, suffix, random_len));
-        return match f(path) {
+        return match f(world_accessible, path) {
             Err(ref e) if e.kind() == io::ErrorKind::AlreadyExists => continue,
             res => res,
         };

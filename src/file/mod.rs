@@ -944,6 +944,7 @@ impl std::os::windows::io::AsRawHandle for NamedTempFile {
 }
 
 pub(crate) fn create_named(
+    world_accessible: bool,
     mut path: PathBuf,
     open_options: &mut OpenOptions,
 ) -> io::Result<NamedTempFile> {
@@ -952,7 +953,7 @@ pub(crate) fn create_named(
     if !path.is_absolute() {
         path = env::current_dir()?.join(path)
     }
-    imp::create_named(&path, open_options)
+    imp::create_named(world_accessible, &path, open_options)
         .with_err_path(|| path.clone())
         .map(|file| NamedTempFile {
             path: TempPath { path },
